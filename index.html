@@ -160,7 +160,7 @@
     <ul>
       <li><b>都道府県</b>：地方が一致で<span class="hl-y">黄</span></li>
       <li><b>緯度・経度</b>：誤差±0.5度以内で<span class="hl-y">黄</span></li>
-      <li><b>人口</b>：誤差±1万人で<span class="hl-g">緑</span>、±10万人で<span class="hl-y">黄</span></li>
+      <li><b>人口</b>：誤差±1000人で<span class="hl-g">緑</span>、±1万人で<span class="hl-y">黄</span></li>
       <li><b>面積</b>：誤差±10km²で<span class="hl-g">緑</span>、±100km²で<span class="hl-y">黄</span></li>
       <li><b>昼間比率</b>：100%以上か未満かが一致で<span class="hl-y">黄</span></li>
       <li><b>人口増減</b>：プラスかマイナスかが一致で<span class="hl-y">黄</span></li>
@@ -329,7 +329,7 @@ function checkGuess(cityName) {
     <div class="panel-body">
       ${createHintBox("🧭 緯度 (南北)", guess.lat, targetCity.lat, "°", { arrowUp: "⬆️", arrowDown: "⬇️", yellowThresh: 0.5, fixedDecimals: 2 })}
       ${createHintBox("🧭 経度 (東西)", guess.lon, targetCity.lon, "°", { arrowUp: "➡️", arrowDown: "⬅️", yellowThresh: 0.5, fixedDecimals: 2 })}
-      ${createHintBox("👥 人口", guess.population, targetCity.population, "人", { greenThresh: 1000, yellowThresh: 100000 })}
+      ${createHintBox("👥 人口", guess.population, targetCity.population, "人", { greenThresh: 1000, yellowThresh: 10000 })}
       ${createHintBox("🗺️ 面積", guess.area, targetCity.area, "km²", { greenThresh: 10, yellowThresh: 100, fixedDecimals: 2 })}
       ${createHintBox("🏙️ 昼間比率", guess.daytime * 100, targetCity.daytime * 100, "%", { sameSignBase: 100, fixedDecimals: 1 })}
       ${createHintBox("📈 人口増減", guess.popChange, targetCity.popChange, "%", { isPlusSign: true, fixedDecimals: 1, sameSignBase: 0 })}
