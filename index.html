@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>市区町村Guesser</title>
+<style>
+  :root {
+    --bg-color: #f3f4f6;
+    --text-color: #1f2937;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --gray: #9ca3af;
+    --red: #ef4444;
+    --blue: #3b82f6;
+  }
+  body {
+    font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  /* タイトル周り */
+  .title-area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 5px;
+  }
+  h1 { margin: 0; font-size: 24px; }
+  #help-btn {
+    background: none; border: none; font-size: 22px; cursor: pointer;
+    color: #4b5563; padding: 0; transition: transform 0.2s;
+  }
+  #help-btn:hover { transform: scale(1.1); color: var(--blue); }
+  
+  p.desc { text-align: center; font-size: 13px; margin-top: 5px; margin-bottom: 15px; color: #4b5563; line-height: 1.5; }
+  
+  .game-container { width: 100%; max-width: 650px; }
+  
+  /* 入力・コントロールエリア */
+  .input-area {
+    display: flex; gap: 8px; margin-bottom: 10px;
+    background: #fff; padding: 15px; border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+  input[type="text"] {
+    flex: 1; padding: 12px; font-size: 16px; border: 1px solid #d1d5db; border-radius: 8px; outline: none;
+  }
+  input[type="text"]:focus { border-color: var(--blue); }
+  
+  button {
+    padding: 12px 15px; font-size: 15px; background-color: var(--blue);
+    color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;
+    min-width: 70px; transition: background 0.2s;
+  }
+  button:hover { background-color: #2563eb; }
+  button:disabled { background-color: var(--gray); cursor: not-allowed; }
+
+  .sub-controls {
+    display: flex; justify-content: center; gap: 10px; margin-bottom: 15px;
+  }
+  .btn-red { background-color: var(--red); }
+  .btn-red:hover { background-color: #dc2626; }
+  .btn-gray { background-color: #6b7280; }
+  .btn-gray:hover { background-color: #4b5563; }
+
+  /* パネルUI */
+  .guess-panel {
+    background: #fff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin-bottom: 16px; overflow: hidden; animation: fadeIn 0.4s ease-out;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .panel-header {
+    background: #374151; color: white; padding: 12px; font-size: 18px; font-weight: bold;
+    text-align: center; display: flex; justify-content: center; align-items: center; gap: 10px;
+  }
+  .pref-badge { font-size: 12px; padding: 3px 10px; border-radius: 12px; font-weight: normal; }
+  
+  .panel-body { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 12px; }
+  @media(max-width: 500px) { .panel-body { grid-template-columns: repeat(2, 1fr); } }
+
+  .hint-box {
+    padding: 10px 4px; border-radius: 8px; text-align: center; color: white;
+    display: flex; flex-direction: column; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+  .hint-title { font-size: 11px; opacity: 0.95; margin-bottom: 4px; }
+  .hint-val { font-size: 13px; font-weight: bold; }
+  .hint-val span.arrow { font-size: 15px; margin-left: 2px; }
+  
+  .bg-green { background-color: var(--green); }
+  .bg-yellow { background-color: var(--yellow); }
+  .bg-gray { background-color: var(--gray); color: #fff; }
+
+  #message { text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 10px; min-height: 28px; }
+
+  /* モーダル（ヘルプ画面） */
+  .modal {
+    display: none; position: fixed; z-index: 100; left: 0; top: 0;
+    width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);
+    justify-content: center; align-items: center;
+  }
+  .modal-content {
+    background-color: #fff; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2); position: relative; line-height: 1.6; color: #374151;
+  }
+  .modal-content h2 { margin-top: 0; text-align: center; }
+  .modal-content ul { padding-left: 20px; font-size: 14px; }
+  .modal-content li { margin-bottom: 10px; }
+  .close-btn {
+    position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: #9ca3af;
+  }
+  .close-btn:hover { color: #374151; }
+  .hl-g { font-weight: bold; color: var(--green); }
+  .hl-y { font-weight: bold; color: var(--yellow); }
+</style>
+</head>
+<body>
+
+<div class="title-area">
+  <h1>🗾 市区町村Guesser</h1>
+  <button id="help-btn" title="ルールとヒントを見る">❓</button>
+</div>
+<p class="desc">（緯度 ⬆️:より北 / 経度 ➡️:より東）</p>
+
+<div class="game-container">
+  <div class="input-area">
+    <input type="text" id="city-input" list="city-list" placeholder="市区町村名を入力..." autocomplete="off">
+    <datalist id="city-list"></datalist>
+    <button id="guess-btn">予想</button>
+  </div>
+  
+  <div class="sub-controls">
+    <button id="giveup-btn" class="btn-red">ギブアップ</button>
+    <button id="restart-btn" class="btn-gray">はじめから</button>
+  </div>
+
+  <div id="message"></div>
+  <div id="guesses-container"></div>
+</div>
+
+<div id="help-modal" class="modal">
+  <div class="modal-content">
+    <span class="close-btn" id="close-modal">&times;</span>
+    <h2>ヒントの説明</h2>
+    <ul>
+      <li><span class="hl-g">緑色</span> は正解と完全一致、または極めて近い数値です。</li>
+      <li><span class="hl-y">黄色</span> は正解に近い、または同じ性質を持っています。</li>
+    </ul>
+    <ul>
+      <li><b>都道府県</b>：地方が一致で<span class="hl-y">黄</span></li>
+      <li><b>緯度・経度</b>：誤差±0.5度以内で<span class="hl-y">黄</span></li>
+      <li><b>人口</b>：誤差±1万人で<span class="hl-g">緑</span>、±10万人で<span class="hl-y">黄</span></li>
+      <li><b>面積</b>：誤差±10km²で<span class="hl-g">緑</span>、±100km²で<span class="hl-y">黄</span></li>
+      <li><b>昼間比率</b>：100%以上か未満かが一致で<span class="hl-y">黄</span></li>
+      <li><b>人口増減</b>：プラスかマイナスかが一致で<span class="hl-y">黄</span></li>
+    </ul>
+    <div style="text-align: center; margin-top: 15px;">
+      <button id="close-modal-btn" class="btn-gray">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+
+<script>
+let targetCity = null;
+let gameOver = false;
+
+const inputEl = document.getElementById("city-input");
+const datalistEl = document.getElementById("city-list");
+const guessBtn = document.getElementById("guess-btn");
+const giveupBtn = document.getElementById("giveup-btn");
+const restartBtn = document.getElementById("restart-btn");
+const container = document.getElementById("guesses-container");
+const messageEl = document.getElementById("message");
+
+// モーダル関連
+const modal = document.getElementById("help-modal");
+document.getElementById("help-btn").addEventListener("click", () => modal.style.display = "flex");
+document.getElementById("close-modal").addEventListener("click", () => modal.style.display = "none");
+document.getElementById("close-modal-btn").addEventListener("click", () => modal.style.display = "none");
+window.addEventListener("click", (e) => { if (e.target === modal) modal.style.display = "none"; });
+
+function init() {
+  const sortedCities = [...cities].sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+  sortedCities.forEach(city => {
+    const option = document.createElement("option");
+    option.value = city.name;
+    datalistEl.appendChild(option);
+  });
+
+  targetCity = cities[Math.floor(Math.random() * cities.length)];
+  
+  let hintCity;
+  do {
+    hintCity = cities[Math.floor(Math.random() * cities.length)];
+  } while (hintCity.name === targetCity.name);
+
+  checkGuess(hintCity.name);
+}
+
+// 予想処理
+guessBtn.addEventListener("click", processGuess);
+inputEl.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); processGuess(); }
+});
+
+function processGuess() {
+  if (gameOver) return;
+  const selectedName = inputEl.value.trim();
+  if (!selectedName) return;
+  
+  const isValidCity = cities.some(c => c.name === selectedName);
+  if (!isValidCity) {
+    messageEl.style.color = "var(--red)";
+    messageEl.textContent = "リストにない市区町村名です。";
+    setTimeout(() => { if(!gameOver) messageEl.textContent = ""; }, 2000);
+    return;
+  }
+  
+  messageEl.textContent = "";
+  checkGuess(selectedName);
+  inputEl.value = ""; 
+  inputEl.focus();
+}
+
+// サブコントロール処理
+giveupBtn.addEventListener("click", () => {
+  if (gameOver) return;
+  gameOver = true;
+  messageEl.style.color = "var(--red)";
+  messageEl.innerHTML = `無念... 正解は <b>${targetCity.prefecture} ${targetCity.name}</b> でした！`;
+  inputEl.disabled = true;
+  guessBtn.disabled = true;
+  giveupBtn.disabled = true;
+});
+
+restartBtn.addEventListener("click", () => {
+  location.reload(); // ページをリロードしてリセット
+});
+
+/**
+ * 汎用ヒントブロック生成関数
+ */
+function createHintBox(title, val, targetVal, unit = "", options = {}) {
+  const arrowUp = options.arrowUp || "⬆️";
+  const arrowDown = options.arrowDown || "⬇️";
+  const greenThresh = options.greenThresh || 0;
+  
+  let status = "bg-gray";
+  let arrow = "";
+  const diff = Math.abs(val - targetVal);
+
+  if (val === targetVal) {
+    status = "bg-green";
+    arrow = "🎯";
+  } else {
+    // 緑判定
+    if (diff <= greenThresh) {
+      status = "bg-green";
+    } 
+    // 黄色判定（閾値以内）
+    else if (options.yellowThresh !== undefined && diff <= options.yellowThresh) {
+      status = "bg-yellow";
+    } 
+    // 黄色判定（プラスマイナス・基準値の超過一致）
+    else if (options.sameSignBase !== undefined) {
+      const base = options.sameSignBase;
+      if ((val > base && targetVal > base) || (val < base && targetVal < base)) {
+        status = "bg-yellow";
+      }
+    }
+    
+    // 矢印の向き判定
+    if (val < targetVal) arrow = arrowUp;
+    else arrow = arrowDown;
+  }
+
+  let displayVal = val;
+  if (options.fixedDecimals !== undefined) {
+    displayVal = Number(val).toLocaleString(undefined, { 
+      minimumFractionDigits: options.fixedDecimals, maximumFractionDigits: options.fixedDecimals 
+    });
+  } else {
+    displayVal = Number(val).toLocaleString();
+  }
+
+  if (options.isPlusSign && val > 0) displayVal = "+" + displayVal;
+
+  return `
+    <div class="hint-box ${status}">
+      <div class="hint-title">${title}</div>
+      <div class="hint-val">${displayVal}${unit} <span class="arrow">${arrow}</span></div>
+    </div>
+  `;
+}
+
+function checkGuess(cityName) {
+  const guess = cities.find(c => c.name === cityName);
+  if (!guess) return;
+
+  const panel = document.createElement("div");
+  panel.className = "guess-panel";
+
+  let prefStatus = "bg-gray";
+  if (guess.prefecture === targetCity.prefecture) prefStatus = "bg-green";
+  else if (guess.region === targetCity.region) prefStatus = "bg-yellow";
+  
+  let headerHtml = `
+    <div class="panel-header">
+      ${guess.name}
+      <span class="pref-badge ${prefStatus}">${guess.prefecture}</span>
+    </div>
+  `;
+
+  // 昼間比率のデータに100を掛けて、小数第1位まで表示するように修正しました。
+  const bodyHtml = `
+    <div class="panel-body">
+      ${createHintBox("🧭 緯度 (南北)", guess.lat, targetCity.lat, "°", { arrowUp: "⬆️", arrowDown: "⬇️", yellowThresh: 0.5, fixedDecimals: 2 })}
+      ${createHintBox("🧭 経度 (東西)", guess.lon, targetCity.lon, "°", { arrowUp: "➡️", arrowDown: "⬅️", yellowThresh: 0.5, fixedDecimals: 2 })}
+      ${createHintBox("👥 人口", guess.population, targetCity.population, "人", { greenThresh: 1000, yellowThresh: 100000 })}
+      ${createHintBox("🗺️ 面積", guess.area, targetCity.area, "km²", { greenThresh: 10, yellowThresh: 100, fixedDecimals: 2 })}
+      ${createHintBox("🏙️ 昼間比率", guess.daytime * 100, targetCity.daytime * 100, "%", { sameSignBase: 100, fixedDecimals: 1 })}
+      ${createHintBox("📈 人口増減", guess.popChange, targetCity.popChange, "%", { isPlusSign: true, fixedDecimals: 1, sameSignBase: 0 })}
+      ${createHintBox("📅 成立年", guess.established, targetCity.established, "年")}
+      ${createHintBox("🤝 隣接数", guess.neighbors, targetCity.neighbors, "自治体")}
+    </div>
+  `;
+
+  panel.innerHTML = headerHtml + bodyHtml;
+  container.insertBefore(panel, container.firstChild);
+
+  if (guess.name === targetCity.name) {
+    gameOver = true;
+    messageEl.style.color = "var(--green)";
+    messageEl.textContent = "🎉 大正解！おめでとうございます！ 🎉";
+    inputEl.disabled = true;
+    guessBtn.disabled = true;
+    giveupBtn.disabled = true;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
